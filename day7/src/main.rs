@@ -6,7 +6,7 @@ use std::{
 };
 
 fn retrieve_data() -> Result<String> {
-    let mut f = File::open("C:\\software\\adventofcode24\\day7\\reduced.txt")?;
+    let mut f = File::open("C:\\software\\adventofcode24\\day7\\day7.txt")?;
     let mut content = String::new();
     f.read_to_string(&mut content)?;
     Ok(content)
@@ -18,7 +18,6 @@ struct OpResult {
 
 impl OpResult {
     fn from_string(s: &str) -> Result<OpResult> {
-        println!("OR Parsing: {}", s);
         let result = s.parse::<usize>()?;
         Ok(OpResult { result })
     }
@@ -31,7 +30,6 @@ struct OpComponent {
 
 impl OpComponent {
     fn from_string(s: &str) -> Result<OpComponent> {
-        println!("OC Parsing: {}", s);
         let value = s.parse::<usize>()?;
         Ok(OpComponent { value })
     }
@@ -78,13 +76,7 @@ impl Operation {
         Ok((comp1.to_string() + &comp2.to_string()).parse::<usize>()?)
     }
 
-    fn recursive_calc(
-        &self,
-        component_numbers: &[OpComponent],
-        idx: usize,
-        result: usize,
-        combine: bool,
-    ) -> bool {
+    fn recursive_calc(&self, component_numbers: &[OpComponent], idx: usize, result: usize) -> bool {
         if idx == component_numbers.len() {
             if result == self.result.result {
                 return true;
@@ -93,50 +85,31 @@ impl Operation {
             }
         }
 
-        if idx == 0 {
-            println!(
-                "Starting new search for {} with {:?}",
-                self.result.result, component_numbers
-            );
-        }
-
         let num = component_numbers[idx].value;
 
-        let mut operators = OPERATORS.clone().to_vec();
-
-        for op in operators.iter() {
+        for op in OPERATORS.iter() {
             match op {
-                '+' => {
-                    match self.recursive_calc(&component_numbers, idx + 1, result + num, combine) {
-                        true => return true,
-                        false => continue,
-                    }
-                }
+                '+' => match self.recursive_calc(&component_numbers, idx + 1, result + num) {
+                    true => return true,
+                    false => continue,
+                },
                 '*' => {
                     let mut result = result;
                     if result == 0 {
                         result = 1;
                     }
-                    match self.recursive_calc(&component_numbers, idx + 1, result * num, combine) {
+                    match self.recursive_calc(&component_numbers, idx + 1, result * num) {
                         true => return true,
                         false => continue,
                     }
                 }
                 '|' => {
-                    if (idx + 1) >= component_numbers.len() || combine {
-                        // println!("skipping for {}", self.result.result);
-                        continue;
-                    }
-
-                    let mut new_list = component_numbers.to_vec();
                     let new_num = self
-                        .combine(&component_numbers[idx], &component_numbers[idx + 1])
+                        .combine(&OpComponent { value: result }, &component_numbers[idx])
                         .unwrap();
-                    new_list[idx] = OpComponent { value: new_num };
-                    new_list.remove(idx + 1);
 
                     // start a new search with the new list
-                    match self.recursive_calc(&new_list, 0, 0, true) {
+                    match self.recursive_calc(&component_numbers, idx + 1, new_num) {
                         true => return true,
                         false => continue,
                     }
@@ -150,7 +123,7 @@ impl Operation {
     }
 
     fn evaluate(&mut self) {
-        self.is_valid = self.recursive_calc(&self.numbers, 0, 0, false);
+        self.is_valid = self.recursive_calc(&self.numbers, 0, 0);
     }
 }
 
